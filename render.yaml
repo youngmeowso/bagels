@@ -1,0 +1,18 @@
+# Render Blueprint: New + > Blueprint > pick your GitHub repo
+services:
+  - type: web
+    name: bagel-royale
+    runtime: node
+    plan: starter            # a persistent disk needs a paid instance (see README for the free option)
+    buildCommand: echo "no build step - zero dependencies"
+    startCommand: node server.js
+    healthCheckPath: /healthz
+    envVars:
+      - key: SECRET           # signs login tokens - Render generates it once
+        generateValue: true
+      - key: DATA_DIR         # accounts are stored here (on the persistent disk)
+        value: /var/data
+    disk:
+      name: bagel-data
+      mountPath: /var/data
+      sizeGB: 1

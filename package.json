@@ -1,0 +1,10 @@
+{
+  "name": "bagel-royale-online",
+  "version": "1.0.0",
+  "description": "Bagel Royale - hosted game server with accounts, cloud save and online rooms (no dependencies)",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" },
+  "license": "UNLICENSED",
+  "private": true
+}
