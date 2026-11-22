@@ -2,6 +2,15 @@
 
 Hra + server v jednom. Server nemá žádné závislosti (jen Node 18+), takže se nic neinstaluje.
 
+## Major update: obří mapa
+- Mapa je 4× větší (1400×1400) a má **4 typy země**: červená vlna (Crimson Fields), sníh s horami (Frostlands),
+  oblázky (Pebble Coast) a zelená vlna (Emerald Weave). Textury jsou v `public/index.html` (kameny, sníh, zelená vlna).
+- **4 města** s budovami, skly a dřevěnými střechami: Tilted Town (střed), Frost Peak, Pebble Port, Emerald Row.
+  Navíc ~44 samostatných domů po mapě v materiálech podle biomu, víc domů, věží a ruin.
+- **3 typy beden:** dřevěná, modrá (lepší loot, víc rarity) a fialová (zbraně + epic loot, drží se u věží a na létajících ostrovech).
+  Na minimapě jsou žluté / modré / fialové.
+- Zóna je větší (poloměr 700) a hra hlásí vstup do nového biomu.
+
 ## Co to umí
 - **Účty:** v menu zadáš jméno + heslo. Neexistující jméno = vytvoří se nový účet, existující = přihlášení.
   Hesla jsou uložená jako scrypt hash, přihlášení drží 60 dní (token v prohlížeči).
@@ -21,16 +30,22 @@ Hra + server v jednom. Server nemá žádné závislosti (jen Node 18+), takže 
   mají stejnou mapu (bedny, loot, Tilted Town) a vidí se. Mezi hráči se synchronizuje: pozice a vzhled, střelba
   a zásahy, eliminace, sebraný loot, otevřené bedny, postavené a zničené stavby. Max 12 hráčů v místnosti.
 
-## Nasazení na Render
+## Nasazení na Render ZDARMA
 1. Nahraj tuhle složku na GitHub (`public/`, `server.js`, `package.json`, `render.yaml`).
-2. Render → **New + → Blueprint** → vyber repozitář → Apply.
-3. Počkej na deploy a otevři adresu `https://bagel-royale.onrender.com` (nebo jak se ti služba bude jmenovat).
+2. **Účty zdarma (Upstash):** na upstash.com si založ účet a vytvoř **Redis** databázi (free plán). Na její stránce
+   zkopíruj `UPSTASH_REDIS_REST_URL` a `UPSTASH_REDIS_REST_TOKEN`.
+3. Render → **New + → Blueprint** → vyber repozitář. Render se zeptá na dvě proměnné
+   (`UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`) – vlož je. Apply.
+4. Po deployi otevři `https://<tvoje-služba>.onrender.com`.
 
-### Ukládání účtů (důležité)
-Účty jsou v souboru `users.json` v `DATA_DIR`. Render ukládá trvale **jen na Persistent Disk**, a ten
-vyžaduje placenou instanci (Starter) – proto je to tak v `render.yaml`.
-**Free instance** disk nemá: smaž z `render.yaml` řádky `plan`, `DATA_DIR` a celý blok `disk`. Hra poběží,
-ale účty se smažou při každém restartu/deployi a free služba usíná po 15 min nečinnosti.
+### Proč Render chtěl platit a jak to jde zadarmo
+Dřív byl v `render.yaml` plán Starter, protože ukládání účtů do souboru potřebuje *Persistent Disk* a ten Render
+nabízí jen u placených instancí. Free web služba má efemérní disk: smaže se při každém restartu, deployi i uspání.
+Proto teď server ukládá účty do **Upstash Redis** (zdarma) a Render poběží na plánu **free**. Účty přežijí
+restart i uspání. Bez těch dvou proměnných se server vrátí k ukládání do souboru (účty se pak při restartu ztratí).
+
+Limity free plánu Renderu: služba se po 15 minutách bez provozu uspí (WebSocket zprávy z hry se počítají jako
+provoz) a první připojení po uspání trvá asi minutu. Free hodiny jsou 750 za měsíc.
 
 ## Lokální test
 ```

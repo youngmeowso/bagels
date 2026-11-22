@@ -19,17 +19,26 @@ fs.mkdirSync(DATA_DIR, { recursive: true });
 const DB_FILE = path.join(DATA_DIR, 'users.json');
 let users = safeJSON(fs.existsSync(DB_FILE) ? fs.readFileSync(DB_FILE, 'utf8') : '{}') || {};
 let dirty = false, writing = false;
+// optional free cloud storage (Upstash Redis REST) so accounts survive Render free-tier restarts
+const RURL = process.env.UPSTASH_REDIS_REST_URL, RTOK = process.env.UPSTASH_REDIS_REST_TOKEN, RKEY = 'bagel_users';
+const redis = cmd => fetch(RURL, { method: 'POST', headers: { Authorization: 'Bearer ' + RTOK }, body: JSON.stringify(cmd) }).then(r => r.json());
+async function loadRemote() {
+  if (!RURL || !RTOK) return console.log('storage: local file ' + DB_FILE + (process.env.RENDER ? '  (Render free = ephemeral! set UPSTASH_REDIS_REST_URL/TOKEN)' : ''));
+  try { const r = await redis(['GET', RKEY]); if (r.error) throw new Error(r.error); if (r.result) users = safeJSON(r.result) || users; console.log('storage: Upstash Redis, ' + Object.keys(users).length + ' accounts loaded') }
+  catch (e) { console.error('FATAL: cannot reach Upstash (' + e.message + ') - refusing to start so accounts are not overwritten'); process.exit(1) }
+}
 function markDirty() { dirty = true }
 setInterval(flush, 3000).unref();
 function flush() {
   if (!dirty || writing) return; dirty = false; writing = true;
+  if (RURL && RTOK) redis(['SET', RKEY, JSON.stringify(users)]).then(r => { writing = false; if (r.error) { dirty = true; console.error('redis save error', r.error) } }).catch(e => { writing = false; dirty = true; console.error('redis save error', e.message) });
   const tmp = DB_FILE + '.tmp';
   fs.writeFile(tmp, JSON.stringify(users), err => {
     if (err) { dirty = true; writing = false; return console.error('save error', err) }
     fs.rename(tmp, DB_FILE, e => { writing = false; if (e) { dirty = true; console.error(e) } });
   });
 }
-function exitFlush() { try { if (dirty) fs.writeFileSync(DB_FILE, JSON.stringify(users)) } catch (e) {} process.exit(0) }
+function exitFlush() { try { if (dirty) fs.writeFileSync(DB_FILE, JSON.stringify(users)) } catch (e) {} if (RURL && RTOK && dirty) { redis(['SET', RKEY, JSON.stringify(users)]).catch(() => {}).finally(() => process.exit(0)); setTimeout(() => process.exit(0), 2500) } else process.exit(0) }
 process.on('SIGTERM', exitFlush); process.on('SIGINT', exitFlush);
 
 // ---------- auth ----------
@@ -185,4 +194,4 @@ function checkStart(room) {
     if (!room.timer) { bcast(room, { t: 'cd', s: 3 }); room.timer = setTimeout(() => { room.timer = null; if ([...room.clients.values()].every(c => c.ready) && room.clients.size) { room.started = true; if (room.clients.size >= 2) for (const c of room.clients.values()) users[c.key].matchStart = Date.now(); markDirty(); bcast(room, { t: 'start' }) } }, 3000) }
   } else if (room.timer) { clearTimeout(room.timer); room.timer = null; bcast(room, { t: 'cd', s: 0 }) }
 }
-server.listen(PORT, () => console.log('bagel royale online on :' + PORT + ' data=' + DATA_DIR));
+loadRemote().then(() => server.listen(PORT, () => console.log('bagel royale online on :' + PORT)));
