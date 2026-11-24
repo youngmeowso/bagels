@@ -176,7 +176,7 @@ function onMsg(c, s) {
   if (m.t === 'look') { if (m.look && typeof m.look === 'object') { c.look = m.look; bcast(room, { t: 'look', id: c.id, look: c.look }, c) } return }
   if (m.t === 'ready') { if (room.started) return; c.ready = !!m.r; bcast(room, { t: 'ready', id: c.id, r: c.ready ? 1 : 0 }, c); checkStart(room); return }
   if (!RELAY.has(m.t)) return;
-  if (m.t === 'hit') { const to = room.clients.get(m.to); if (to && typeof m.d === 'number') send(to, { t: 'hit', from: c.id, d: Math.max(0, Math.min(150, m.d)) }); return }
+  if (m.t === 'hit') { const to = room.clients.get(m.to); if (to && typeof m.d === 'number') send(to, { t: 'hit', from: c.id, d: Math.max(0, Math.min(500, m.d)) }); return }
   m.from = c.id;
   if (m.t === 'st') c.st = m;
   else if (m.t === 'it') { if (typeof m.id === 'string' && m.id[0] === 'w') room.taken.add(m.id); else room.drops.delete(m.id) }
